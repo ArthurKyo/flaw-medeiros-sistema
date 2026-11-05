@@ -1,0 +1,1 @@
+{ "name": "Flaw Medeiros Fisioterapia Veterinária", "short_name": "Flaw Medeiros", "start_url": "./index.html", "display": "standalone", "background_color": "#070B12", "theme_color": "#070B12", "icons": [{ "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml" }] }
