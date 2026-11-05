@@ -1,10 +1,46 @@
-# Flaw Medeiros · Sistema da clínica de fisioterapia veterinária
+<div align="center">
 
-Sistema web completo para uma clínica de **fisioterapia e reabilitação animal**. Ele organiza agenda, fichas de pacientes e tutores, pacotes de sessões, avaliações fisioterapêuticas, prontuário, financeiro e documentos impressos, com a identidade visual da marca **Flaw Medeiros Fisioterapia Veterinária**.
+<img src="docs/banner.png" alt="Flaw Medeiros: sistema para clínica de fisioterapia veterinária" width="100%">
 
-Funciona direto no navegador, sem instalação. **Os dados ficam na nuvem (Supabase)**, com login por e-mail e senha, e sincronizam entre computador e celular. Acesse pelo endereço publicado no GitHub Pages: **https://arthurkyo.github.io/flaw-medeiros-sistema/**
+# Flaw Medeiros · Sistema de fisioterapia veterinária
 
-![Painel](docs/screenshots/02-painel.png)
+**CRM completo para uma clínica real de fisioterapia e reabilitação animal:** agenda, prontuário, avaliações com goniometria, pacotes de sessões, financeiro e relatórios, sincronizados na nuvem.
+
+<p>
+  <a href="https://arthurkyo.github.io/flaw-medeiros-sistema/"><img src="https://img.shields.io/badge/▶_Ver_demonstração-14D9D3?style=for-the-badge&logoColor=04161D" alt="Ver demonstração"></a>
+  <a href="#funcionalidades"><img src="https://img.shields.io/badge/Funcionalidades-F52187?style=for-the-badge" alt="Funcionalidades"></a>
+  <a href="docs/ARQUITETURA.md"><img src="https://img.shields.io/badge/Arquitetura-20437D?style=for-the-badge" alt="Arquitetura"></a>
+</p>
+
+<p>
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white" alt="HTML5">
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white" alt="CSS3">
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black" alt="JavaScript">
+  <img src="https://img.shields.io/badge/Supabase-3FCF8E?style=flat-square&logo=supabase&logoColor=white" alt="Supabase">
+  <img src="https://img.shields.io/badge/PostgreSQL_+_RLS-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/PWA-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA">
+  <img src="https://img.shields.io/badge/GitHub_Pages-222222?style=flat-square&logo=githubpages&logoColor=white" alt="GitHub Pages">
+  <img src="https://img.shields.io/badge/sem_frameworks-0_dependências_de_build-0284A4?style=flat-square" alt="Sem frameworks">
+</p>
+
+</div>
+
+<div align="center"><img src="docs/demo.gif" alt="Demonstração: login animado, painel, agenda, ficha do paciente, avaliação e financeiro" width="88%"></div>
+
+### Destaques
+
+| | |
+|---|---|
+| 🗓️ **Agenda inteligente** | Dia, semana e mês; arrastar para remarcar; bloqueios; agendar o pacote inteiro de uma vez |
+| 🐾 **Sessões do pacote** | Anéis e "trilha de pegadas" mostram as sessões feitas, as agendadas e as que faltam |
+| 📐 **Avaliação clínica** | Claudicação, propriocepção, goniometria e perimetria, com comparativo automático |
+| 💸 **Financeiro** | Parcelas, recebido no mês, valores em aberto, cobrança por WhatsApp e recibo em PDF |
+| 📄 **Relatório de evolução** | Documento com logo, gráfico de dor e mobilidade e todas as sessões, para o tutor e o veterinário |
+| ☁️ **Nuvem e equipe** | Login real, sincronização entre computador e celular, funcionamento offline e acesso para a secretária |
+| 🔐 **LGPD** | Consentimento, termo para imprimir, exportação e anonimização dos dados do tutor |
+| 🎨 **Design** | Marca da clínica com o logo animado, modo claro e escuro, animações e layout responsivo |
+
+> Desenvolvido sob medida para a clínica **Flaw Medeiros Fisioterapia Veterinária**. A demonstração pública permite criar uma conta e carregar dados de exemplo em *Ajustes*.
 
 ---
 
