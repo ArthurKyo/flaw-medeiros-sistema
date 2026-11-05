@@ -83,7 +83,17 @@
       this.db.clinic = Object.assign(base.clinic, this.db.clinic || {});
       return this.db;
     },
+    /* banco limpo (ou a partir de um cache) — usado pela nuvem ao trocar de conta */
+    fresh(cache) {
+      const base = empty(); base.services = [];
+      const db = Object.assign(base, cache || {});
+      db.clinic = Object.assign(empty().clinic, (cache && cache.clinic) || {});
+      return db;
+    },
+    defaultServices,
     save() {
+      const cloud = window.Cloud && Cloud.enabled && Cloud.clinicId;
+      if (cloud) { Cloud.schedule(); return true; }
       try { localStorage.setItem(KEY, JSON.stringify(this.db)); return true; }
       catch (e) { window.UI && UI.toast('O armazenamento do navegador está cheio. Remova fotos grandes ou exporte um backup.', 'error'); return false; }
     },

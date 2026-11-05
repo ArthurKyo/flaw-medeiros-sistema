@@ -70,6 +70,17 @@ services: { id, name, duration, price, color }
 - A sessão fica em `sessionStorage`, ou em `localStorage` por 30 dias com "manter conectada". Ela é invalidada quando a senha muda.
 - Cinco erros seguidos geram um bloqueio de 60 segundos.
 
-## Migração futura para a nuvem
+## Nuvem (cloud.js)
 
-Para levar os dados à nuvem (Supabase), basta trocar as funções `load`, `save`, `put` e `del` do `store.js` por chamadas à API, mantendo um cache local. As telas continuam iguais, porque só acessam os dados pelo `Store`.
+- `Store.save()` chama `Cloud.schedule()` quando há uma clínica conectada.
+- `Cloud.flush()`:
+  - compara cada registro com a última versão enviada (`snap`);
+  - envia em lotes de 400 com `upsert` em `records`;
+  - registros que sumiram localmente sobem com `deleted = true`.
+- `Cloud.pull()` baixa as linhas com `updated_at` maior que a última sincronização, em páginas de 1.000. Registros com alteração local ainda não enviada não são sobrescritos.
+- Sem conexão, o status fica *offline* e o sistema tenta de novo a cada 10 segundos e no evento `online`.
+- Funções do banco:
+  - `ensure_clinic` cria ou retorna a clínica do usuário;
+  - `add_member`, `list_members` e `remove_member` cuidam da equipe;
+  - `is_member` é usada pelas regras de RLS.
+- O login usa o fluxo PKCE: os links de confirmação e de recuperação voltam com `?code=`, que não conflita com as rotas por `#`.

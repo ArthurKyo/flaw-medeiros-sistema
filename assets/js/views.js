@@ -774,15 +774,21 @@
           <header class="panel-head"><h2>Acesso</h2></header>
           <form data-account class="form-grid">
             ${F.input('name', 'Seu nome', u.name)}
-            ${F.input('email', 'E-mail de login', u.email, { type: 'email' })}
+            ${F.input('email', 'E-mail de login', u.email, { type: 'email', readonly: u.cloud || undefined, hint: u.cloud ? 'Conta na nuvem. Para trocar o e-mail, fale com o suporte.' : '' })}
             ${F.input('current', 'Senha atual', '', { type: 'password', autocomplete: 'current-password' })}
             ${F.input('next', 'Nova senha', '', { type: 'password', autocomplete: 'new-password', hint: 'Mínimo de 8 caracteres. Deixe em branco para manter.' })}
-            <div class="form-actions span-2"><button type="button" class="btn btn-ghost" data-recovery>Gerar novo código de recuperação</button><span class="spacer"></span><button class="btn btn-primary" type="submit">Salvar acesso</button></div>
+            <div class="form-actions span-2">${u.cloud ? '' : '<button type="button" class="btn btn-ghost" data-recovery>Gerar novo código de recuperação</button>'}<span class="spacer"></span><button class="btn btn-primary" type="submit">Salvar acesso</button></div>
           </form>
         </section>
+        ${u.cloud ? `<section class="panel" data-team>
+          <header class="panel-head"><h2>Equipe</h2><span class="sync-pill" data-sync data-state="${Cloud.status}"><i></i><span>Nuvem</span></span></header>
+          <p class="prose">Quem estiver na equipe entra com o próprio e-mail e senha e vê a mesma agenda e as mesmas fichas.</p>
+          <ul class="team-list"><li class="muted">Carregando…</li></ul>
+          <form class="team-add search" hidden><input type="email" placeholder="E-mail da pessoa (ela precisa ter criado a conta)" aria-label="E-mail para adicionar à equipe"><button class="btn btn-soft btn-sm" type="submit">Adicionar</button></form>
+        </section>` : ''}
         <section class="panel">
           <header class="panel-head"><h2>Dados e backup</h2></header>
-          <p class="prose">Os dados ficam salvos neste navegador (${(used / 1024).toFixed(0)} KB usados). Exporte um backup toda semana e guarde no Drive ou no computador. Para usar em outro aparelho, importe o arquivo lá.</p>
+          <p class="prose">${u.cloud ? 'Os dados ficam na nuvem e sincronizam sozinhos entre os aparelhos. Exporte um backup de vez em quando como cópia extra de segurança.' : `Os dados ficam salvos neste navegador (${(used / 1024).toFixed(0)} KB usados). Exporte um backup toda semana e guarde no Drive ou no computador. Para usar em outro aparelho, importe o arquivo lá.`}</p>
           <div class="btn-row">
             <button class="btn btn-soft" data-export>${I('download')}Exportar backup</button>
             <label class="btn btn-ghost">${I('upload')}Importar backup<input type="file" accept="application/json,.json" data-import hidden></label>
@@ -799,16 +805,35 @@
           if (d.dayEnd <= d.dayStart) return U.toast('O horário de término precisa ser depois do início.', 'error');
           Object.assign(Store.db.clinic, d); Store.save(); U.toast('Dados da clínica salvos.'); App.refresh();
         });
-        root.querySelector('[data-account]').addEventListener('submit', e => {
+        root.querySelector('[data-account]').addEventListener('submit', async e => {
           e.preventDefault(); const d = U.formData(e.target);
           if (!/^\S+@\S+\.\S+$/.test(d.email)) return U.toast('Informe um e-mail válido.', 'error');
-          const emailChanged = d.email.toLowerCase() !== u.email;
-          if ((d.next || emailChanged) && !Auth.checkPassword(d.current)) return U.toast('Senha atual incorreta.', 'error');
+          const emailChanged = !u.cloud && d.email.toLowerCase() !== u.email;
           if (d.next && d.next.length < 8) return U.toast('A nova senha precisa ter pelo menos 8 caracteres.', 'error');
-          u.name = d.name || u.name; u.email = d.email.toLowerCase(); Store.save();
-          if (d.next) Auth.changePassword(d.next); else Auth._start(!!localStorage.getItem('passo.auth.v1'));
-          U.toast('Acesso atualizado.'); App.refresh();
+          if ((d.next || emailChanged) && !(await Auth.checkPassword(d.current))) return U.toast('Senha atual incorreta.', 'error');
+          try {
+            if (u.cloud) { if (d.name && d.name !== u.name) await Auth.rename(d.name); if (d.next) await Auth.changePassword(d.next); }
+            else { u.name = d.name || u.name; u.email = d.email.toLowerCase(); Store.save(); if (d.next) Auth.changePassword(d.next); else Auth._start(!!localStorage.getItem('passo.auth.v1')); }
+            U.toast('Acesso atualizado.'); App.refresh();
+          } catch (err) { U.toast(err.message || 'Não foi possível atualizar.', 'error'); }
         });
+        const team = root.querySelector('[data-team]');
+        if (team && window.Cloud && Cloud.enabled) {
+          const draw = async () => {
+            try {
+              const list = await Cloud.members(), owner = list.some(m => m.user_id === Cloud.user.id && m.role === 'owner');
+              team.querySelector('.team-list').innerHTML = list.map(m => `<li><span class="tav tav-sm">${esc(U.initials(m.email))}</span><span><b>${esc(m.email)}</b><small>${m.role === 'owner' ? 'Dona da clínica' : 'Equipe'}${m.user_id === Cloud.user.id ? ' (você)' : ''}</small></span>${owner && m.role !== 'owner' ? `<button class="icon-btn" data-rm="${m.user_id}" aria-label="Remover ${esc(m.email)}">${I('trash')}</button>` : ''}</li>`).join('');
+              team.querySelector('.team-add').hidden = !owner;
+            } catch (err) { team.querySelector('.team-list').innerHTML = `<li class="muted">Não foi possível carregar a equipe.</li>`; }
+          };
+          draw();
+          team.addEventListener('submit', async e => {
+            e.preventDefault(); const email = e.target.querySelector('input').value.trim(); if (!email) return;
+            try { const r = await Cloud.addMember(email); U.toast(r === 'ok' ? 'Pessoa adicionada à equipe.' : r === 'self' ? 'Esse é o seu próprio e-mail.' : 'Não há conta com esse e-mail. Peça para a pessoa criar a conta neste site primeiro.', r === 'ok' ? 'ok' : 'error'); e.target.reset(); draw(); }
+            catch (err) { U.toast(err.message, 'error'); }
+          });
+          team.addEventListener('click', async e => { const b = e.target.closest('[data-rm]'); if (!b) return; if (await U.confirm({ title: 'Remover da equipe?', text: 'A pessoa perde o acesso aos dados da clínica.', ok: 'Remover', danger: true })) { try { await Cloud.removeMember(b.dataset.rm); draw(); } catch (err) { U.toast(err.message, 'error'); } } });
+        }
         root.addEventListener('click', async e => {
           const g = s => e.target.closest(s);
           if (g('[data-svc-new]')) F.service();

@@ -151,6 +151,7 @@
             </div>
             <div class="hdr-pills">
               <span class="gpill">${I('home')}<span><b>Clínica:</b> ${esc(clinic.name || 'Fisioterapia animal')}</span></span>
+              ${window.Cloud && Cloud.enabled ? `<span class="gpill sync-pill" data-sync data-state="${Cloud.status}"><i></i><span>${Cloud.status === 'ok' ? 'Sincronizado' : 'Nuvem'}</span></span>` : ''}
               <span class="gpill gpill-date">${I('calendar')}<span>${U.DIA_C[tdy.getDay()]}, ${tdy.getDate()} ${U.MES_L[tdy.getMonth()].slice(0, 3)}</span></span>
             </div>
             <div class="hdr-act">${App.themeBtn()}<button class="gsq hdr-search" data-search aria-label="Buscar (Ctrl+K)" data-tip="Buscar  Ctrl K">${I('search')}</button>${view.action || ''}<button class="ybtn" data-quick aria-label="Criar novo">${I('plus')}<span>Novo</span></button><button class="gsq only-mobile" data-logout aria-label="Sair">${I('logout')}</button></div>
@@ -257,6 +258,7 @@
       const root = document.getElementById('root');
       const clinic = Store.db.clinic.name;
       const pw = (name, label, ac) => `<label class="field"><span class="field-label">${label}</span><span class="pw"><input type="password" name="${name}" autocomplete="${ac}" required minlength="${name === 'password' && mode === 'login' ? 1 : 8}"><button type="button" class="pw-eye" aria-label="Mostrar senha" data-eye>${I('eye')}</button></span></label>`;
+      const cloud = !!(window.Cloud && Cloud.enabled);
       const forms = {
         login: `<form class="auth-form" novalidate data-mode="login">
             <h2>Entrar</h2>
@@ -266,19 +268,28 @@
             <div class="auth-row"><label class="check-inline"><input type="checkbox" name="remember" checked><span>Manter conectada por 30 dias</span></label><button type="button" class="link" data-mode-to="recover">Esqueci a senha</button></div>
             <p class="auth-err" role="alert" hidden></p>
             <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+            ${cloud ? `<p class="auth-alt">Primeira vez aqui? <button type="button" class="link" data-mode-to="setup">Criar conta da clínica</button></p>` : ''}
           </form>`,
         setup: `<form class="auth-form" novalidate data-mode="setup">
-            <h2>Criar acesso</h2>
-            <p class="auth-sub">Primeiro acesso neste aparelho. Crie o login da clínica.</p>
+            <h2>${cloud ? 'Criar conta' : 'Criar acesso'}</h2>
+            <p class="auth-sub">${cloud ? 'Sua conta funciona em qualquer aparelho, com os dados salvos na nuvem.' : 'Primeiro acesso neste aparelho. Crie o login da clínica.'}</p>
             <label class="field"><span class="field-label">Seu nome</span><input name="name" autocomplete="name" required></label>
             <label class="field"><span class="field-label">Nome da clínica</span><input name="clinic" placeholder="Ex.: Flaw Medeiros Fisioterapia Veterinária"></label>
             <label class="field"><span class="field-label">E-mail</span><input type="email" name="email" autocomplete="username" required inputmode="email"></label>
             ${pw('password', 'Senha (mínimo 8 caracteres)', 'new-password')}
             ${pw('confirm', 'Confirme a senha', 'new-password')}
             <p class="auth-err" role="alert" hidden></p>
-            <button class="btn btn-primary btn-block" type="submit">Criar acesso e entrar</button>
+            <button class="btn btn-primary btn-block" type="submit">${cloud ? 'Criar conta' : 'Criar acesso e entrar'}</button>
+            ${cloud ? `<p class="auth-alt">Já tem conta? <button type="button" class="link" data-mode-to="login">Entrar</button></p>` : ''}
           </form>`,
-        recover: `<form class="auth-form" novalidate data-mode="recover">
+        recover: cloud ? `<form class="auth-form" novalidate data-mode="recover">
+            <h2>Esqueci a senha</h2>
+            <p class="auth-sub">Enviamos um link para o seu e-mail para criar uma nova senha.</p>
+            <label class="field"><span class="field-label">E-mail</span><input type="email" name="email" autocomplete="username" required value="${esc(localStorage.getItem('passo.lastEmail') || '')}"></label>
+            <p class="auth-err" role="alert" hidden></p>
+            <button class="btn btn-primary btn-block" type="submit">Enviar link</button>
+            <button type="button" class="link auth-back" data-mode-to="login">Voltar para o login</button>
+          </form>` : `<form class="auth-form" novalidate data-mode="recover">
             <h2>Nova senha</h2>
             <p class="auth-sub">Use o código de recuperação que apareceu quando o acesso foi criado.</p>
             <label class="field"><span class="field-label">E-mail</span><input type="email" name="email" autocomplete="username" required></label>
@@ -289,6 +300,15 @@
             <button type="button" class="link auth-back" data-mode-to="login">Voltar para o login</button>
           </form>`,
       };
+      forms.newpass = `<form class="auth-form" novalidate data-mode="newpass">
+            <h2>Nova senha</h2>
+            <p class="auth-sub">Crie a nova senha da sua conta.</p>
+            ${pw('password', 'Nova senha (mínimo 8 caracteres)', 'new-password')}
+            ${pw('confirm', 'Confirme a senha', 'new-password')}
+            <p class="auth-err" role="alert" hidden></p>
+            <button class="btn btn-primary btn-block" type="submit">Salvar e entrar</button>
+          </form>`;
+      forms.notice = `<div class="auth-form"><h2>Confira seu e-mail</h2><p class="auth-sub">${esc(this._notice || '')}</p><button type="button" class="btn btn-primary btn-block" data-mode-to="login">Ir para o login</button></div>`;
       root.innerHTML = `
       <div class="auth">
         <section class="auth-art">
@@ -314,22 +334,25 @@
       document.title = 'Entrar | Flaw Medeiros Fisioterapia Veterinária';
       this.authMotion(root);
       const form = root.querySelector('form');
-      const err = form.querySelector('.auth-err');
+      const err = form ? form.querySelector('.auth-err') : null;
       const fail = msg => { err.hidden = false; err.textContent = msg; form.classList.remove('shake'); void form.offsetWidth; form.classList.add('shake'); };
-      root.addEventListener('click', e => {
+      root.onclick = e => {
         const eye = e.target.closest('[data-eye]');
         if (eye) { const i = eye.previousElementSibling; const show = i.type === 'password'; i.type = show ? 'text' : 'password'; eye.innerHTML = I(show ? 'eyeoff' : 'eye'); eye.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha'); }
         const to = e.target.closest('[data-mode-to]'); if (to) this.renderAuth(to.dataset.modeTo);
         if (e.target.closest('[data-privacy-open]')) Clinic.privacy();
-      });
-      setTimeout(() => { const f = form.querySelector('input:not([value=""]):not([type=checkbox])') && mode === 'login' && form.email.value ? form.password : form.querySelector('input'); f && f.focus(); }, 50);
-      form.addEventListener('submit', e => {
+      };
+      if (form) setTimeout(() => { const f = form.querySelector('input:not([value=""]):not([type=checkbox])') && mode === 'login' && form.email.value ? form.password : form.querySelector('input'); f && f.focus(); }, 50);
+      form && form.addEventListener('submit', async e => {
         e.preventDefault();
         const d = U.formData(form);
         err.hidden = true;
+        const btn = form.querySelector('button[type=submit]'), btnTxt = btn.textContent;
+        const busy = on => { btn.disabled = on; btn.textContent = on ? 'Aguarde…' : btnTxt; };
         if (mode === 'login') {
           if (!d.email || !d.password) return fail('Informe e-mail e senha.');
-          const r = Auth.login(d.email, d.password, d.remember);
+          busy(true); const r = await Auth.login(d.email, d.password, d.remember); busy(false);
+          if (!r.ok && r.message) return fail(r.message);
           if (!r.ok) {
             if (r.reason === 'locked') return fail(`Muitas tentativas. Tente de novo em ${Auth.lockedFor()} segundos.`);
             return fail(r.left > 0 && r.left < 3 ? `E-mail ou senha incorretos. Mais ${r.left} tentativa${r.left > 1 ? 's' : ''} antes de um bloqueio de 1 minuto.` : 'E-mail ou senha incorretos.');
@@ -343,11 +366,27 @@
           if (!/^\S+@\S+\.\S+$/.test(d.email)) return fail('Informe um e-mail válido.');
           if ((d.password || '').length < 8) return fail('A senha precisa ter pelo menos 8 caracteres.');
           if (d.password !== d.confirm) return fail('As senhas não são iguais.');
-          const code = Auth.setup(d);
+          busy(true); const code = await Auth.setup(d); busy(false);
           localStorage.setItem('passo.lastEmail', d.email.trim().toLowerCase());
+          if (code && code.error) return fail(code.error);
+          if (code && code.confirm) { this._notice = `Enviamos um link de confirmação para ${d.email.trim()}. Abra o e-mail, clique no link e depois entre com seu e-mail e senha.`; return this.renderAuth('notice'); }
           location.hash = '#/painel';
           this.render();
-          this.showRecovery(code);
+          if (typeof code === 'string') this.showRecovery(code);
+        }
+        if (mode === 'recover' && cloud) {
+          if (!/^\S+@\S+\.\S+$/.test(d.email || '')) return fail('Informe um e-mail válido.');
+          busy(true); const er = await Auth.sendReset(d.email); busy(false);
+          if (er) return fail(er);
+          this._notice = `Se existir uma conta com ${d.email.trim()}, você vai receber um link para criar a nova senha. O link abre este site.`;
+          return this.renderAuth('notice');
+        }
+        if (mode === 'newpass') {
+          if ((d.password || '').length < 8) return fail('A senha precisa ter pelo menos 8 caracteres.');
+          if (d.password !== d.confirm) return fail('As senhas não são iguais.');
+          busy(true); const er = await Auth.newPassword(d.password); busy(false);
+          if (er) return fail(er);
+          U.toast('Senha alterada.'); location.hash = '#/painel'; return this.render();
         }
         if (mode === 'recover') {
           if ((d.password || '').length < 8) return fail('A nova senha precisa ter pelo menos 8 caracteres.');
@@ -358,11 +397,22 @@
       });
     },
 
-    init() {
+    async init() {
       Store.load();
+      if (window.Cloud && Cloud.enabled) {
+        document.getElementById('root').innerHTML = `<div class="boot"><div class="boot-logo">${BrandLogo('anim hero')}</div><p>Conectando…</p></div>`;
+        try { await Cloud.init(); } catch (e) { console.error(e); }
+        if (Cloud.recovering) { this.bindGlobal(); return this.renderAuth('newpass'); }
+      }
+      this.bindGlobal();
+      this.render();
+      setInterval(() => { if (Auth.current() && !document.querySelector('.modal-back') && ['painel', 'agenda'].includes(this.route().page)) this.render(); }, 5 * 60000);
+    },
+    bindGlobal() {
+      if (this._bound) return; this._bound = true;
       window.addEventListener('hashchange', () => this.render());
       document.addEventListener('click', e => {
-        if (e.target.closest('[data-logout]')) { Auth.logout(); document.querySelectorAll('.modal-back').forEach(m => m.remove()); document.body.classList.remove('no-scroll'); this.renderAuth('login'); return; }
+        if (e.target.closest('[data-logout]')) { Promise.resolve(Auth.logout()).then(() => this.renderAuth('login')); document.querySelectorAll('.modal-back').forEach(m => m.remove()); document.body.classList.remove('no-scroll'); this.renderAuth('login'); return; }
         if (e.target.closest('[data-quick]')) return this.quickMenu();
         if (e.target.closest('[data-more]')) return this.moreSheet();
         if (e.target.closest('[data-search]')) return Extra.search();
@@ -371,9 +421,6 @@
       });
       let w = window.innerWidth;
       window.addEventListener('resize', () => { const nw = window.innerWidth; if ((w < 900) !== (nw < 900) && Auth.current() && this.route().page === 'agenda') this.render(); w = nw; });
-      this.render();
-      // mantém "Hoje" correto se o app ficar aberto de um dia para o outro
-      setInterval(() => { if (Auth.current() && !document.querySelector('.modal-back') && ['painel', 'agenda'].includes(this.route().page)) this.render(); }, 5 * 60000);
     },
   };
 

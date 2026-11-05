@@ -2,7 +2,7 @@
 
 Sistema web completo para uma clínica de **fisioterapia e reabilitação animal**. Ele organiza agenda, fichas de pacientes e tutores, pacotes de sessões, avaliações fisioterapêuticas, prontuário, financeiro e documentos impressos, com a identidade visual da marca **Flaw Medeiros Fisioterapia Veterinária**.
 
-Funciona direto no navegador, sem instalação e sem servidor. Basta abrir o `index.html` ou acessar o endereço publicado no GitHub Pages.
+Funciona direto no navegador, sem instalação. **Os dados ficam na nuvem (Supabase)**, com login por e-mail e senha, e sincronizam entre computador e celular. Acesse pelo endereço publicado no GitHub Pages: **https://arthurkyo.github.io/flaw-medeiros-sistema/**
 
 ![Painel](docs/screenshots/02-painel.png)
 
@@ -24,10 +24,12 @@ Funciona direto no navegador, sem instalação e sem servidor. Basta abrir o `in
 ## Como usar
 
 ### Primeiro acesso
-1. Abra o site, ou o arquivo `index.html` no Chrome, Edge ou Safari.
-2. Na tela **Criar acesso**, informe seu nome, o nome da clínica, o e-mail e uma senha de pelo menos 8 caracteres.
-3. Aparece um **código de recuperação**. Guarde esse código: é ele que permite criar uma nova senha se você esquecer a atual.
-4. Para conhecer o sistema com dados fictícios, clique em **Ver com dados de exemplo** no Painel, ou vá em *Ajustes > Carregar dados de exemplo*. Para limpar, use *Ajustes > Apagar todos os dados*.
+1. Abra o site e clique em **Criar conta da clínica**.
+2. Informe seu nome, o nome da clínica, o e-mail e uma senha de pelo menos 8 caracteres.
+3. Abra o e-mail de confirmação e clique no link. Ele traz você de volta ao site.
+4. Entre com o e-mail e a senha. A mesma conta funciona em qualquer aparelho.
+5. Se você esquecer a senha, use **Esqueci a senha** para receber um link por e-mail.
+6. Para conhecer o sistema com dados fictícios, clique em **Ver com dados de exemplo** no Painel, ou vá em *Ajustes > Carregar dados de exemplo*. Para limpar, use *Ajustes > Apagar todos os dados*.
 
 ### No dia a dia
 | Quero… | Onde |
@@ -48,10 +50,10 @@ Funciona direto no navegador, sem instalação e sem servidor. Basta abrir o `in
 ## Funcionalidades
 
 ### Login
-- Login local com senha protegida por hash (SHA-256 com salt e 2.000 iterações).
-- **Código de recuperação** gerado no primeiro acesso.
-- Bloqueio de 1 minuto após 5 tentativas erradas.
-- Opção "manter conectada por 30 dias".
+- **Conta na nuvem (Supabase Auth)**: criar conta com confirmação por e-mail, entrar em qualquer aparelho e recuperar a senha por link.
+- **Equipe**: a dona adiciona uma secretária pelo e-mail em *Ajustes › Equipe*, e as duas veem a mesma agenda e as mesmas fichas.
+- Indicador no topo: *Sincronizado*, *Salvando* ou *Offline*. Sem internet, tudo fica salvo no aparelho e é enviado quando a conexão volta.
+- Sem a nuvem configurada, o sistema funciona em modo local, com senha protegida por hash SHA-256 com salt e código de recuperação.
 - Tela animada com o logo da marca (a mesma sequência do vídeo oficial), cards flutuantes, contagem de números e um cachorrinho correndo.
 
 ![Login](docs/screenshots/01-login.png)
@@ -159,7 +161,10 @@ assets/
   js/views.js              telas: painel, agenda, pacientes, ficha, tutores, sessões, ajustes
   js/features.js           financeiro, recibo, relatório, confirmações, busca, agendamento do pacote
   js/clinic.js             avaliação fisioterapêutica, LGPD, bloqueios, visão mensal, arrastar
+  js/cloud.js              nuvem: login Supabase, sincronização por diferença, fila offline, equipe
+  js/config.js             URL e chave pública do Supabase (deixe vazio para modo local)
   js/app.js                rotas, menu, login, tema, dados de exemplo
+supabase/schema.sql        tabelas, funções e regras de segurança (RLS) do banco
 docs/
   ARQUITETURA.md           detalhes técnicos e modelo de dados
   screenshots/             imagens usadas neste README
@@ -167,7 +172,14 @@ docs/
 
 - **Rotas por hash** (`#/painel`, `#/agenda`, `#/pacientes/:id`…), que funcionam no GitHub Pages sem configuração.
 - **Renderização**: cada tela devolve `{ title, html, mount }`. Depois de qualquer alteração nos dados, a tela é redesenhada; as animações de entrada rodam só na navegação.
-- **Dados**: um único objeto JSON em `localStorage` (`passo.db.v1`), com as coleções `tutors`, `pets`, `plans`, `appointments`, `sessions`, `payments`, `evaluations`, `blocks` e `services`.
+- **Dados**: em memória, com uma cópia no aparelho (`localStorage`), divididos nas coleções `tutors`, `pets`, `plans`, `appointments`, `sessions`, `payments`, `evaluations`, `blocks` e `services`.
+- **Nuvem**: cada registro vira uma linha da tabela `records` (`clinic_id`, `coll`, `id`, `data jsonb`, `deleted`, `updated_at`).
+  - Cada alteração é comparada com a última versão enviada, e só o que mudou sobe, em lotes.
+  - A cada 30 segundos, e quando a janela volta ao foco, o sistema baixa o que mudou desde a última sincronização.
+  - Exclusões são marcadas com `deleted = true`, para chegarem também aos outros aparelhos.
+- **Segurança da nuvem**:
+  - *Row Level Security*: cada usuário só lê e grava os registros da clínica em que é membro.
+  - A chave usada no site é a **publishable** (pública por natureza); sem login, ela não dá acesso a nenhum dado.
 
 O modelo de dados completo está em [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
 
@@ -175,9 +187,11 @@ O modelo de dados completo está em [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
 
 ## Dados, segurança e LGPD
 
-- Nesta versão, **os dados ficam no navegador do aparelho** em que o sistema é usado. **Exporte o backup toda semana** (Ajustes › Exportar backup) e guarde-o num local seguro.
-- Para usar em outro aparelho, importe o backup nele. A sincronização automática entre aparelhos depende do backend na nuvem (veja os [próximos passos](#próximos-passos)).
-- A senha nunca é guardada em texto: só o hash com salt.
+- **Os dados ficam no Supabase** (região São Paulo), protegidos por login e por regras de acesso no banco.
+- **O plano gratuito do Supabase não faz backup automático.** Exporte o backup de vez em quando (Ajustes › Exportar backup) e guarde-o num local seguro.
+- No plano gratuito, **o projeto pausa depois de 7 dias sem uso**. Se a clínica ficar fechada por mais tempo, reative em supabase.com › projeto › *Restore*.
+- As senhas são guardadas pelo Supabase Auth, nunca no código do site.
+- No primeiro login de um aparelho que já tinha dados no modo local, o sistema pergunta se deve enviá-los para a conta.
 - **LGPD**:
   - registro do consentimento do tutor, com data;
   - autorização separada para mensagens;
@@ -215,6 +229,7 @@ O sistema foi feito em etapas, a partir dos pedidos da cliente:
 7. **Recursos de valor**: agendamento do pacote inteiro, financeiro com recibo, confirmações por WhatsApp, relatório de evolução, busca rápida e avisos.
 8. **Modo claro e escuro**.
 9. **Recursos clínicos e legais**: avaliação fisioterapêutica estruturada com comparativo, LGPD, bloqueios de agenda, visão mensal e arrastar para remarcar.
+10. **Nuvem**: login real e sincronização entre aparelhos com o Supabase, mais a gestão de equipe.
 
 Cada etapa foi testada de ponta a ponta com um navegador automatizado (Playwright): criar acesso, entrar, carregar os dados de exemplo, agendar, registrar sessão e conferir a contagem do pacote, pagamento e recibo, relatório, arrastar na agenda e trocar o tema. Os testes rodaram no computador e no celular (iPhone 13), sem erros de JavaScript.
 
@@ -224,13 +239,16 @@ Cada etapa foi testada de ponta a ponta com um navegador automatizado (Playwrigh
 
 | Prioridade | Item | Depende de |
 |---|---|---|
-| Alta | Dados na nuvem e login real (Supabase), com sincronização entre computador e celular e acesso para uma secretária | Conta no Supabase (gratuita no início) |
 | Alta | Domínio próprio (ex.: `sistema.flawmedeiros.com.br`) | Domínio da clínica |
 | Média | Fotos e vídeos de marcha anexados à ficha | Armazenamento na nuvem (Supabase Storage) |
 | Média | Lembretes automáticos por WhatsApp (API oficial) | Conta no WhatsApp Business API |
 | Baixa | Portal do tutor para ver a evolução e os horários | Backend na nuvem |
 
-A camada de dados está concentrada em `assets/js/store.js` (`Store.put`, `Store.get`, `Store.del`, `Store.all`). Por isso, a migração para a nuvem fica restrita a esse arquivo.
+### Como recriar o banco num projeto Supabase novo
+1. Crie o projeto (região São Paulo).
+2. No **SQL Editor**, cole e rode `supabase/schema.sql`.
+3. Em *Authentication › URL Configuration*, coloque o endereço do site em **Site URL** e em **Redirect URLs** (com `/**` no final).
+4. Coloque a Project URL e a chave *publishable* em `assets/js/config.js`.
 
 ---
 

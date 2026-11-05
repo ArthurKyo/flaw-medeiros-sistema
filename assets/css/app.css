@@ -1568,3 +1568,23 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none;
 .mc-ev.st-faltou { background: rgba(245, 33, 135, .14); }
 .mc-more { font-size: 11px; color: var(--text-3); font-weight: 700; padding-left: 4px; }
 @media (max-width: 700px) { .mc { min-height: 64px; padding: 5px; } .mc-ev { font-size: 0; padding: 0; height: 5px; border-radius: 3px; } .mc-ev em { display: none; } .mc-more { font-size: 10px; } .tb-right { gap: 8px; } }
+
+/* =========================================================
+   NUVEM: inicialização, sincronização, equipe
+   ========================================================= */
+.boot { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 14px; color: var(--text-3); font-weight: 600; }
+.boot-logo { width: min(340px, 80vw); }
+.auth-alt { text-align: center; font-size: 14px; color: var(--text-2); }
+.sync-pill { gap: 8px; }
+.sync-pill i { width: 9px; height: 9px; border-radius: 50%; background: var(--text-3); flex: none; }
+.sync-pill[data-state="ok"] i { background: #3FD68F; box-shadow: 0 0 0 4px rgba(63, 214, 143, .15); }
+.sync-pill[data-state="saving"] i { background: var(--yellow); animation: nowBlink 1s ease-in-out infinite; }
+.sync-pill[data-state="offline"] i, .sync-pill[data-state="error"] i { background: var(--brand-magenta); }
+.panel-head .sync-pill { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--text-3); display: inline-flex; align-items: center; }
+@media (max-width: 1180px) { .hdr-pills .sync-pill span { display: none; } .hdr-pills .sync-pill { padding: 0 16px; } }
+.team-list { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 6px; }
+.team-list li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 14px; background: var(--glass); border: 1px solid var(--stroke); }
+.team-list li > span:nth-child(2) { flex: 1; min-width: 0; }
+.team-list b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.team-list small { display: block; font-size: 12.5px; color: var(--text-3); }
+.team-add { max-width: none; padding-right: 6px; }
